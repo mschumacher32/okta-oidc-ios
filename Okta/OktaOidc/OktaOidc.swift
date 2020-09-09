@@ -40,6 +40,10 @@ public class OktaOidc: NSObject {
     @objc public func hasActiveBrowserSession() -> Bool {
         return currentUserSessionTask != nil
     }
+    
+    @objc public func resumeSession(_ url: URL) -> Bool {
+        return currentUserSessionTask?.resume(with: url) ?? false
+    }
 
     func signInWithBrowserTask(_ task: OktaOidcBrowserTask,
                                callback: @escaping ((OktaOidcStateManager?, Error?) -> Void)) {

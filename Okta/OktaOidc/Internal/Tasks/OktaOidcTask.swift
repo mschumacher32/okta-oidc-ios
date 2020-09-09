@@ -26,14 +26,15 @@ class OktaOidcTask {
             }
             return
         }
+        let defaultURL = URL(string: "https://www.bobcat.com/")!
 
         oktaAPI.get(configUrl, headers: nil, onSuccess: { response in
             guard let dictResponse = response, let oidConfig = try? OIDServiceDiscovery(dictionary: dictResponse) else {
                 callback(nil, OktaOidcError.parseFailure)
                 return
             }
-
-            callback(OIDServiceConfiguration(discoveryDocument: oidConfig), nil)
+            
+            callback(OIDServiceConfiguration(authorizationEndpoint: URL(string: "\(self.config.issuer)/v1/authorize") ?? defaultURL, tokenEndpoint: URL(string: "\(self.config.issuer)/v1/token") ?? defaultURL, issuer: oidConfig.issuer, registrationEndpoint: URL(string: "\(self.config.issuer)/v1/clients"), endSessionEndpoint: URL(string: "\(self.config.issuer)/v1/logout")), nil)
         }, onError: { error in
             let responseError =
                 "Error returning discovery document: \(error.localizedDescription). Please" +

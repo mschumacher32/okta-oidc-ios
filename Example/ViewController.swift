@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Okta, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019-Present, Okta, Inc. and/or its affiliates. All rights reserved.
  * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
  *
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
@@ -10,18 +10,25 @@
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-import UIKit
 import OktaOidc
+import UIKit
 
-class ViewController: UIViewController {
+// swiftlint:disable force_try
+// swiftlint:disable force_cast
+// swiftlint:disable force_unwrapping
 
-    @IBOutlet weak var tokenView: UITextView!
-    @IBOutlet weak var signInButton: UIButton!
+// swiftlint:disable force_try
+// swiftlint:disable force_cast
+// swiftlint:disable force_unwrapping
+
+final class ViewController: UIViewController {
+
+    @IBOutlet private weak var tokenView: UITextView!
+    @IBOutlet private weak var signInButton: UIButton!
     
     private var oktaAppAuth: OktaOidc?
     private var authStateManager: OktaOidcStateManager? {
         didSet {
-            oldValue?.clear()
             authStateManager?.writeToSecureStorage()
         }
     }
@@ -31,7 +38,7 @@ class ViewController: UIViewController {
     }
     
     private var testConfig: OktaOidcConfig? {
-        return try? OktaOidcConfig(with:[
+        return try? OktaOidcConfig(with: [
             "issuer": ProcessInfo.processInfo.environment["ISSUER"]!,
             "clientId": ProcessInfo.processInfo.environment["CLIENT_ID"]!,
             "redirectUri": ProcessInfo.processInfo.environment["REDIRECT_URI"]!,
@@ -42,17 +49,22 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        oktaAppAuth = try? OktaOidc(configuration: isUITest ? testConfig : nil)
+        
+        let configuration = try? OktaOidcConfig.default()
+        configuration?.requestCustomizationDelegate = self
+        oktaAppAuth = try? OktaOidc(configuration: isUITest ? testConfig : configuration)
         AppDelegate.shared.oktaOidc = oktaAppAuth
         
         if let config = oktaAppAuth?.configuration {
             authStateManager = OktaOidcStateManager.readFromSecureStorage(for: config)
+            authStateManager?.requestCustomizationDelegate = self
         }
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        guard let _ = oktaAppAuth else {
+        
+        guard oktaAppAuth != nil else {
             self.updateUI(updateText: "SDK is not configured!")
             return
         }
@@ -62,6 +74,7 @@ class ViewController: UIViewController {
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         super.prepare(for: segue, sender: sender)
+        
         guard let authViewController = segue.destination as? AuthViewController else {
             return
         }
@@ -81,7 +94,9 @@ class ViewController: UIViewController {
     }
 
     @IBAction func clearTokens(_ sender: Any) {
-        authStateManager?.clear()
+        try? authStateManager?.removeFromSecureStorage()
+        authStateManager = nil
+        
         self.buildTokenTextView()
     }
 
@@ -118,7 +133,7 @@ class ViewController: UIViewController {
         // Get current accessToken
         guard let accessToken = authStateManager?.accessToken else { return }
 
-        authStateManager?.revoke(accessToken) { response, error in
+        authStateManager?.revoke(accessToken) { _, error in
             if error != nil { self.updateUI(updateText: "Error: \(error!)") }
             self.updateUI(updateText: "AccessToken was revoked")
         }
@@ -141,14 +156,15 @@ class ViewController: UIViewController {
         guard let authStateManager = authStateManager else { return }
         
         oktaAppAuth?.signOut(authStateManager: authStateManager, from: self, progressHandler: { currentOption in
-            if currentOption.contains(.revokeAccessToken) {
+            switch currentOption {
+            case .revokeAccessToken, .revokeRefreshToken, .removeTokensFromStorage, .revokeTokensOptions:
                 self.updateUI(updateText: "Revoking tokens...")
-            } else if currentOption.contains(.revokeRefreshToken) {
-                self.updateUI(updateText: "Revoking tokens...")
-            } else if currentOption.contains(.signOutFromOkta) {
+            case .signOutFromOkta:
                 self.updateUI(updateText: "Signing out from Okta...")
+            default:
+                break
             }
-        }, completionHandler: { success, failedOptions in
+        }, completionHandler: { success, _ in
             if success {
                 self.authStateManager = nil
                 self.buildTokenTextView()
@@ -159,7 +175,7 @@ class ViewController: UIViewController {
     }
 
     func updateUI(updateText: String) {
-        DispatchQueue.main.async { self.tokenView.text = updateText }
+        tokenView.text = updateText
     }
 
     func buildTokenTextView() {
@@ -182,5 +198,20 @@ class ViewController: UIViewController {
         }
 
         self.updateUI(updateText: tokenString)
+    }
+}
+
+extension ViewController: OktaNetworkRequestCustomizationDelegate {
+    func customizableURLRequest(_ request: URLRequest?) -> URLRequest? {
+        if let request = request {
+            print("request: \(request)")
+        }
+        return request
+    }
+   
+    func didReceive(_ response: URLResponse?) {
+        if let response = response {
+            print("response: \(response)")
+        }
     }
 }

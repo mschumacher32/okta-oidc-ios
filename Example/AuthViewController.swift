@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Okta, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017-Present, Okta, Inc. and/or its affiliates. All rights reserved.
  * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
  *
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
@@ -10,17 +10,17 @@
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-import UIKit
 import OktaOidc
+import UIKit
 
-class AuthViewController : UIViewController {
+final class AuthViewController: UIViewController {
     
-    @IBOutlet var tokenTextView: UITextView!
-    @IBOutlet var authenticateButton: UIButton!
-    @IBOutlet var messageView: UITextView!
+    @IBOutlet private weak var tokenTextView: UITextView!
+    @IBOutlet private weak var authenticateButton: UIButton!
+    @IBOutlet private weak var messageView: UITextView!
     
-    @IBOutlet var progessOverlay: UIView!
-    @IBOutlet var progessIndicator: UIActivityIndicatorView!
+    @IBOutlet private weak var progessOverlay: UIView!
+    @IBOutlet private weak var progessIndicator: UIActivityIndicatorView!
     
     var oktaAppAuth: OktaOidc?
     var onAuthenticated: ((OktaOidcStateManager?) -> Void)?
@@ -31,6 +31,7 @@ class AuthViewController : UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
         hideProgress()
         clearMessageView()
     }

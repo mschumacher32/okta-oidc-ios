@@ -18,30 +18,30 @@
         Copyright (C) 2019 Okta Inc.
  */
 
-#import "OIDExternalUserAgentIOS.h"
+#import "OKTExternalUserAgentIOS.h"
 
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
 
-#import "OIDErrorUtilities.h"
-#import "OIDExternalUserAgentSession.h"
-#import "OIDExternalUserAgentRequest.h"
+#import "OKTErrorUtilities.h"
+#import "OKTExternalUserAgentSession.h"
+#import "OKTExternalUserAgentRequest.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
-@interface OIDExternalUserAgentIOS ()<SFSafariViewControllerDelegate, ASWebAuthenticationPresentationContextProviding>
+@interface OKTExternalUserAgentIOS ()<SFSafariViewControllerDelegate, ASWebAuthenticationPresentationContextProviding>
 @end
 #else
-@interface OIDExternalUserAgentIOS ()<SFSafariViewControllerDelegate>
+@interface OKTExternalUserAgentIOS ()<SFSafariViewControllerDelegate>
 @end
 #endif
 
-@implementation OIDExternalUserAgentIOS {
+@implementation OKTExternalUserAgentIOS {
   UIViewController *_presentingViewController;
 
   BOOL _externalUserAgentFlowInProgress;
-  __weak id<OIDExternalUserAgentSession> _session;
+  __weak id<OKTExternalUserAgentSession> _session;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
   __weak SFSafariViewController *_safariVC;
@@ -71,8 +71,8 @@ NS_ASSUME_NONNULL_BEGIN
   return self;
 }
 
-- (BOOL)presentExternalUserAgentRequest:(id<OIDExternalUserAgentRequest>)request
-                                session:(id<OIDExternalUserAgentSession>)session {
+- (BOOL)presentExternalUserAgentRequest:(id<OKTExternalUserAgentRequest>)request
+                                session:(id<OKTExternalUserAgentSession>)session {
   if (_externalUserAgentFlowInProgress) {
     // TODO: Handle errors as authorization is already in progress.
     return NO;
@@ -179,13 +179,13 @@ NS_ASSUME_NONNULL_BEGIN
         }
     
   // iOS 8 and earlier, use mobile Safari
-  if (!openedUserAgent){
-    openedUserAgent = [[UIApplication sharedApplication] openURL:requestURL];
-  }
+//  if (!openedUserAgent){
+//    openedUserAgent = [[UIApplication sharedApplication] openURL:requestURL];
+//  }
 
   if (!openedUserAgent) {
     [self cleanUp];
-    NSError *safariError = [OIDErrorUtilities errorWithCode:OIDErrorCodeSafariOpenError
+    NSError *safariError = [OKTErrorUtilities errorWithCode:OKTErrorCodeSafariOpenError
                                             underlyingError:nil
                                                 description:@"Unable to open Safari."];
     [session failExternalUserAgentFlowWithError:safariError];
@@ -245,9 +245,9 @@ NS_ASSUME_NONNULL_BEGIN
     // Ignore this call if there is no authorization flow in progress.
     return;
   }
-  id<OIDExternalUserAgentSession> session = _session;
+  id<OKTExternalUserAgentSession> session = _session;
   [self cleanUp];
-  NSError *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeUserCanceledAuthorizationFlow
+  NSError *error = [OKTErrorUtilities errorWithCode:OKTErrorCodeUserCanceledAuthorizationFlow
                                     underlyingError:nil
                                         description:@"No external user agent flow in progress."];
   [session failExternalUserAgentFlowWithError:error];

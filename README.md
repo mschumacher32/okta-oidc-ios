@@ -1,7 +1,5 @@
-![iOS_14 ready](https://img.shields.io/badge/iOS%2014-IN%20PROGRESS-green?style=for-the-badge&logo=apple)
-
 [<img src="https://aws1.discourse-cdn.com/standard14/uploads/oktadev/original/1X/0c6402653dfb70edc661d4976a43a46f33e5e919.png" align="right" width="256px"/>](https://devforum.okta.com/)
-[![CI Status](http://img.shields.io/travis/okta/okta-oidc-ios.svg?style=flat)](https://travis-ci.com/okta/okta-oidc-ios)
+[![CI Status](https://github.com/okta/okta-oidc-ios/actions/workflows/okta-oidc.yml/badge.svg)](https://travis-ci.com/okta/okta-oidc-ios)
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](https://img.shields.io/cocoapods/v/OktaOidc.svg?style=flat)](http://cocoapods.org/pods/OktaOidc)
 [![License](https://img.shields.io/cocoapods/l/OktaOidc.svg?style=flat)](http://cocoapods.org/pods/OktaOidc)
@@ -40,6 +38,7 @@ You can learn more on the [Okta + iOS](https://developer.okta.com/code/ios/) pag
 - [Development](#development)
   - [Running Tests](#running-tests)
 - [Modify network requests](#modify-network-requests)
+- [Migration](#migration)
 - [Known issues](#known-issues)
 - [Contributing](#contributing)
 
@@ -86,7 +85,7 @@ pod 'OktaOidc'
 Then install it into your project:
 
 ```bash
-pod install
+pod install --repo-update
 ```
 
 ### Carthage
@@ -185,6 +184,17 @@ if #available(iOS 13.0, *) {
 }
 ```
 ***Note*** Flag is available on iOS 13 and above versions
+
+
+### Token Time Validation
+
+Custom token time validation is possible by adopting to `OKTTokenValidator` protocol and then setting `tokenValidator` variable: 
+
+```swift
+configuration?.tokenValidator = self
+```
+
+By default `OKTDefaultTokenValidator` object is set. 
 
 ### How to use in Objective-C project
 
@@ -508,6 +518,20 @@ extension SomeNSObject: OktaNetworkRequestCustomizationDelegate {
 ```
 
 ***Note:*** It is highly recommended to copy all of the existing parameters from the original URLRequest object to modified request without any changes. Altering of this data could lead network request to fail. If `customizableURLRequest(_:)` method returns `nil` default request will be used.
+
+## Migration
+
+### Migrating from 3.10.x to 3.11.x
+
+The SDK `okta-oidc-ios` has a major changes in error handling. Consider these guidelines to update your code.
+
+- `APIError` is renamed as `api`.
+- `api` error has the additional parameter `underlyingError`, it's an optional and indicates the origin of the error.
+- Introduced a new error `authorization(error:description:)`.
+- `authorization` error appears when authorization server fails due to errors during authorization.
+- `unexpectedAuthCodeResponse(statusCode:)` has an error code parameter.
+- `OktaOidcError` conforms to `CustomNSError` protocol. It means you can convert the error to `NSError` and get `code`, `userInfo`, `domain`, `underlyingErrors`.
+- `OktaOidcError` conforms to `Equatable` protocol. The errors can be compared for equality using the operator `==` or inequality using the operator `!=`.
 
 ## Known issues
 

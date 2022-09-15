@@ -32,13 +32,22 @@ open class OktaOidcStateManager: NSObject, NSSecureCoding {
             authState.delegate = newValue
         }
     }
+    
+    @objc public var tokenValidator: OKTTokenValidator {
+        get {
+            authState.validator
+        }
+        set {
+            authState.validator = newValue
+        }
+    }
 
     @objc open var accessToken: String? {
         // Return the known accessToken if it hasn't expired
         guard let tokenResponse = self.authState.lastTokenResponse,
               let token = tokenResponse.accessToken,
               let tokenExp = tokenResponse.accessTokenExpirationDate,
-              tokenExp.timeIntervalSince1970 > Date().timeIntervalSince1970 else {
+              !tokenValidator.isDateExpired(tokenExp, token: .access) else {
             return nil
         }
         
@@ -93,7 +102,9 @@ open class OktaOidcStateManager: NSObject, NSSecureCoding {
                 return OktaOidcError.JWTDecodeError
         }
         
-        if tokenObject.expiresAt.timeIntervalSinceNow < 0 {
+        if tokenValidator.isDateExpired(tokenObject.expiresAt, token: .id) {
+            return OktaOidcError.JWTValidationError("ID Token expired")
+        } else if tokenObject.expiresAt.timeIntervalSinceNow < 0 {
             return OktaOidcError.JWTValidationError("ID Token expired")
         }
         
@@ -213,6 +224,8 @@ open class OktaOidcStateManager: NSObject, NSSecureCoding {
         }
 
         let state: OktaOidcStateManager?
+        prepareKeyedArchiver()
+      
         if #available(iOS 11, OSX 10.14, *) {
             state = (try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(encodedAuthState)) as? OktaOidcStateManager
         } else {
@@ -220,6 +233,22 @@ open class OktaOidcStateManager: NSObject, NSSecureCoding {
         }
 
         return state
+    }
+  
+    /// This method can be removed in the future with release 4.0.0 or higher.
+    /// Resolves OKTA-427089
+    private static func prepareKeyedArchiver() {
+        let classes = [OKTAuthorizationRequest.self, OKTAuthorizationResponse.self,
+                       OKTAuthState.self, OKTEndSessionRequest.self,
+                       OKTEndSessionResponse.self, OKTRegistrationRequest.self,
+                       OKTRegistrationResponse.self, OKTServiceConfiguration.self,
+                       OKTServiceDiscovery.self, OKTTokenRequest.self,
+                       OKTTokenResponse.self]
+        
+        for archivedClass in classes {
+            let className = "\(archivedClass)".replacingOccurrences(of: "OKT", with: "OID")
+            NSKeyedUnarchiver.setClass(archivedClass, forClassName: className)
+        }
     }
 }
 

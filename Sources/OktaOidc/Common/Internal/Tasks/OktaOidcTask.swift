@@ -36,10 +36,7 @@ class OktaOidcTask {
             
             callback(OIDServiceConfiguration(authorizationEndpoint: URL(string: "\(self.config.issuer)/v1/authorize") ?? defaultURL, tokenEndpoint: URL(string: "\(self.config.issuer)/v1/token") ?? defaultURL, issuer: oidConfig.issuer, registrationEndpoint: URL(string: "\(self.config.issuer)/v1/clients"), endSessionEndpoint: URL(string: "\(self.config.issuer)/v1/logout")), nil)
         }, onError: { error in
-            let responseError =
-                "Error returning discovery document: \(error.localizedDescription). Please" +
-                " check your PList configuration"
-            callback(nil, OktaOidcError.APIError(responseError))
+            callback(nil, error)
         })
     }
 }

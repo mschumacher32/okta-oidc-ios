@@ -127,10 +127,59 @@ static NSString *const kHTMLErrorRedirectNotValid =
   _httpServ = nil;
 }
 
+- (BOOL)isOptionsHTTPServerRequest:(HTTPServerRequest *)request {
+    CFStringRef method = CFHTTPMessageCopyRequestMethod(request.request);
+    if (method == nil) {
+        return NO;
+    }
+
+    BOOL isOptionsRequest = CFStringCompare(method, (__bridge CFStringRef)@"OPTIONS", kCFCompareCaseInsensitive) == kCFCompareEqualTo;
+    CFRelease(method);
+
+    return isOptionsRequest;
+}
+
 - (void)HTTPConnection:(HTTPConnection *)conn didReceiveRequest:(HTTPServerRequest *)mess {
+  // Handle private network preflight
+  // https://developer.chrome.com/blog/private-network-access-preflight/
+  BOOL isOptionsRequest = [self isOptionsHTTPServerRequest:mess];
+
+  CFStringRef requestPrivateNetwork = isOptionsRequest ? CFHTTPMessageCopyHeaderFieldValue(mess.request, (__bridge CFStringRef)@"Access-Control-Request-Private-Network") : nil;
+  BOOL doesRequestPrivateNetwork = requestPrivateNetwork != nil && CFStringCompare(requestPrivateNetwork, (__bridge CFStringRef)@"true", 0) == kCFCompareEqualTo;
+  if (requestPrivateNetwork != nil) {
+    CFRelease(requestPrivateNetwork);
+  }
+  if (isOptionsRequest && doesRequestPrivateNetwork) {
+    CFHTTPMessageRef response = CFHTTPMessageCreateResponse(
+                                                            kCFAllocatorDefault,
+                                                            200,
+                                                            NULL,
+                                                            kCFHTTPVersion1_1);
+    CFStringRef origin = CFHTTPMessageCopyHeaderFieldValue(mess.request, (__bridge CFStringRef)@"Origin");
+    CFHTTPMessageSetHeaderFieldValue(response,
+                                     (__bridge CFStringRef)@"Access-Control-Allow-Origin",
+                                     origin);
+    CFHTTPMessageSetHeaderFieldValue(response,
+                                     (__bridge CFStringRef)@"Access-Control-Allow-Credentials",
+                                     (__bridge CFStringRef)@"true");
+    CFHTTPMessageSetHeaderFieldValue(response,
+                                     (__bridge CFStringRef)@"Access-Control-Allow-Private-Network",
+                                     (__bridge CFStringRef)@"true");
+    CFHTTPMessageSetHeaderFieldValue(response,
+                                     (__bridge CFStringRef)@"Content-Length",
+                                     (__bridge CFStringRef)@"0");
+    [mess setResponse:response];
+    CFRelease(response);
+    return;
+  }
+
+  BOOL handled = NO;
   // Sends URL to AppAuth.
   CFURLRef url = CFHTTPMessageCopyRequestURL(mess.request);
-  BOOL handled = [_currentAuthorizationFlow resumeExternalUserAgentFlowWithURL:(__bridge NSURL *)url];
+  if (url != nil) {
+    handled = [_currentAuthorizationFlow resumeExternalUserAgentFlowWithURL:(__bridge NSURL *)url];
+    CFRelease(url);
+  }
 
   // Stops listening to further requests after the first valid authorization response.
   if (handled) {
